@@ -36,7 +36,6 @@
 
 ;;; Code:
 
-(require 'eshell)
 (require 'json)
 (require 'subr-x)
 
@@ -465,7 +464,8 @@ CAREFUL! If PROPAGATE-ENV is non-nil, this will modify your
                   (let ((new-path-elts (split-string (cdr binding)
                                                      path-separator)))
                     (setq exec-path new-path-elts)
-                    (setq-default eshell-path-env new-path-elts)))))))))))
+                    (when (featurep 'eshell)
+                      (setq-default eshell-path-env new-path-elts))))))))))))
 
 
 (defun pyvenv--env-diff (env-before env-after)
@@ -593,19 +593,18 @@ Right now, this just checks if WORKON_HOME is set."
 
 (defun pyvenv--add-dirs-to-PATH (dirs-to-add)
   "Add DIRS-TO-ADD to different variables related to execution paths."
-  (let* ((new-eshell-path-env (pyvenv--prepend-to-pathsep-string dirs-to-add (default-value 'eshell-path-env)))
-         (new-path-envvar (pyvenv--prepend-to-pathsep-string dirs-to-add (getenv "PATH"))))
-    (setq exec-path (append dirs-to-add exec-path))
-    (setq-default eshell-path-env new-eshell-path-env)
-    (setenv "PATH" new-path-envvar)))
+  (setq exec-path (append dirs-to-add exec-path))
+  (setenv "PATH" (pyvenv--prepend-to-pathsep-string dirs-to-add (getenv "PATH")))
+  (when (featurep 'eshell)
+    (setq-default eshell-path-env
+                  (pyvenv--prepend-to-pathsep-string dirs-to-add (default-value 'eshell-path-env)))))
 
 (defun pyvenv--remove-dirs-from-PATH (dirs-to-remove)
   "Remove DIRS-TO-REMOVE from different variables related to execution paths."
-  (let* ((new-eshell-path-env (pyvenv--remove-from-pathsep-string dirs-to-remove (default-value 'eshell-path-env)))
-         (new-path-envvar (pyvenv--remove-from-pathsep-string dirs-to-remove (getenv "PATH"))))
-    (setq exec-path (pyvenv--remove-many-once dirs-to-remove exec-path))
-    (setq-default eshell-path-env new-eshell-path-env)
-    (setenv "PATH" new-path-envvar)))
+  (setq exec-path (pyvenv--remove-many-once dirs-to-remove exec-path))
+  (setenv "PATH" (pyvenv--remove-from-pathsep-string dirs-to-remove (getenv "PATH")))
+  (when (featurep 'eshell)
+    (setq-default eshell-path-env (pyvenv--remove-from-pathsep-string dirs-to-remove (default-value 'eshell-path-env)))))
 
 ;;; Compatibility
 
